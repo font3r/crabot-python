@@ -4,6 +4,7 @@ import aiohttp
 from typing import Final
 
 from gateway_contracts import GatewayOpcode, GatewayPayload, IdentifyData, MessageEvent, ReadyEvent
+from rest_client import handle_command, init_rest_client, is_command
 
 DISCORD_GATEWAY: Final = "wss://gateway.discord.gg/?v=10&encoding=json"
 
@@ -13,10 +14,12 @@ class DiscordGatewayClient:
 		self.heartbeat_interval: int = 41250
 		self.session_id: str | None = None
 		self.sequence: int | None = None
+		self.session: aiohttp.ClientSession
 		self.ws: aiohttp.ClientWebSocketResponse | None = None
 
 	async def connect(self):
 		async with aiohttp.ClientSession() as session:
+			self.session = session
 			async with session.ws_connect(DISCORD_GATEWAY) as ws:
 				self.ws = ws
 				print(f"[CONNECTED] {DISCORD_GATEWAY}")
@@ -53,6 +56,10 @@ class DiscordGatewayClient:
 				msg = MessageEvent.from_payload(payload.data)
 				print(f"[S->C=MSG] #{msg.channel_id} {msg.author_username}: {msg.content}")
 
+				if is_command(msg.content):
+					msg.content = msg.content.strip("!")
+					await handle_command(self.session, msg)
+
 		elif payload.op == GatewayOpcode.INVALID_SESSION:
 			print("[ERROR] Invalid session — re-identifying...")
 			await asyncio.sleep(2)
@@ -62,7 +69,6 @@ class DiscordGatewayClient:
 		while True:
 			await asyncio.sleep(self.heartbeat_interval / 1000)
 			await self.send(GatewayPayload(op=GatewayOpcode.HEARTBEAT, data=self.sequence))
-			print(f"[S->C=HEARTBEAT] seq={self.sequence}")
 
 	async def identify(self):
 		identify_data = IdentifyData(token=self.token, intents=33281)
@@ -80,6 +86,7 @@ async def main():
 	if token is None:
 		raise ValueError("Missing bot token from env=DISCORD_BOT_TOKEN")
 
+	init_rest_client(token)
 	await DiscordGatewayClient(token).connect()
 
 if __name__ == "__main__":
