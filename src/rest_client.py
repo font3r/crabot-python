@@ -5,8 +5,10 @@ import aiohttp
 
 DISCORD_API_GATEWAY: Final = "https://discord.com/api/v10/"
 
+
 class MessageRequest(BaseModel):
     content: str
+
 
 class DiscordRestClient:
     def __init__(self, token: str):

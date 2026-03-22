@@ -52,7 +52,6 @@ class DiscordGatewayClient:
             asyncio.create_task(self.heartbeat_loop())
             await self.identify()
 
-
         elif payload.op == GatewayOpcode.DISPATCH and payload.data:
             print(f"[S->C=EVENT] {payload.event_name}")
             if payload.event_name == "READY":
@@ -60,7 +59,9 @@ class DiscordGatewayClient:
                 self.session_id = ready.session_id
             elif payload.event_name == "MESSAGE_CREATE":
                 msg = MessageEvent.from_payload(payload.data)
-                print(f"[S->C=MSG] #{msg.channel_id} {msg.author_username}: {msg.content}")
+                print(
+                    f"[S->C=MSG] #{msg.channel_id} {msg.author_username}: {msg.content}"
+                )
                 await handle_command(self.rest_client, msg)
 
         elif payload.op == GatewayOpcode.INVALID_SESSION:
@@ -71,11 +72,15 @@ class DiscordGatewayClient:
     async def heartbeat_loop(self):
         while True:
             await asyncio.sleep(self.heartbeat_interval / 1000)
-            await self.send(GatewayPayload(op=GatewayOpcode.HEARTBEAT, data=self.sequence))
+            await self.send(
+                GatewayPayload(op=GatewayOpcode.HEARTBEAT, data=self.sequence)
+            )
 
     async def identify(self):
         identify_data = IdentifyData(token=self.token, intents=33281)
-        await self.send(GatewayPayload(op=GatewayOpcode.IDENTIFY, data=identify_data.to_dict()))
+        await self.send(
+            GatewayPayload(op=GatewayOpcode.IDENTIFY, data=identify_data.to_dict())
+        )
 
     async def send(self, payload: GatewayPayload):
         if self.ws is None:
