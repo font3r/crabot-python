@@ -1,3 +1,5 @@
+import datetime
+
 import aiohttp
 from pydantic import BaseModel, ValidationError
 
@@ -10,7 +12,7 @@ class ApiError(Exception):
 
 class ExchangeRateResponse(BaseModel):
     amount: float
-    date: str
+    date: datetime.date
     base: str
     rates: dict[str, float]
 
