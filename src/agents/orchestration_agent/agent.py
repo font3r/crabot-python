@@ -7,8 +7,9 @@ from catering_agent.agent import catering_agent
 
 
 SYSTEM_INSTRUCTION = (
-    "You are a helpful assistant for personal use. "
-    "Your sole purpouse is to router user intent to other specialized agents. "
+    "Your sole purpouse is to route user intent to other specialized agents. "
+    "If none of the available agents can answer the question, politely refuse to help. "
+    "Do not answer questions unrelated to sub-agents capabilities. "
     f"Today is {datetime.date.today()}"
 )
 

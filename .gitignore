@@ -71,3 +71,6 @@ logs/
 # Compiled files
 *.so
 *.dylib
+
+# Other
+knowledge/
