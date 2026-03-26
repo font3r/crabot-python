@@ -30,9 +30,30 @@ class DeliveryMenu(BaseModel):
 
 
 class DeliveryMenuMeal(BaseModel):
+    delivery_meal_id: int = Field(alias="deliveryMealId")
     meal_time: str = Field(alias="mealName")
     meal_name: str = Field(alias="menuMealName")
     thermo: str = Field(alias="thermo")
+
+
+class DeliveryMealChange(BaseModel):
+    change_options: list[MealChangeOptions] = Field(alias="mealChangeOptions")
+
+
+class MealChangeOptions(BaseModel):
+    details: MealChangeDetails = Field(alias="menuMealDetails")
+
+
+class MealChangeDetails(BaseModel):
+    meal_time: str = Field(alias="mealName")
+    mean_name: str = Field(alias="menuMealName")
+    thermo: str = Field(alias="thermo")
+    diet_calories_meal_id: int = Field(alias="dietCaloriesMealId")
+
+
+class ApiError(BaseModel):
+    title: str
+    message: str
 
 
 @cached(ttl=180, cache=SimpleMemoryCache)
@@ -46,7 +67,8 @@ async def get_active_order() -> dict[str, Any]:
             headers=_get_utility_headers(),
             cookies=await _get_session(),
         )
-        resp.raise_for_status()
+        if not resp.ok:
+            return _handle_error(await resp.text())
 
         return {
             "status": "success",
@@ -63,7 +85,8 @@ async def get_order_details(order_id: int) -> dict[str, Any]:
             headers=_get_utility_headers(),
             cookies=await _get_session(),
         )
-        resp.raise_for_status()
+        if not resp.ok:
+            return _handle_error(await resp.text())
 
         return {
             "status": "success",
@@ -72,18 +95,40 @@ async def get_order_details(order_id: int) -> dict[str, Any]:
 
 
 async def get_delivery_menu(delivery_id: int) -> dict[str, Any]:
-    logger.info(f"fetching delivery mernu {delivery_id}")
+    logger.info(f"fetching delivery menu {delivery_id}")
     async with aiohttp.ClientSession(VIKING_API) as session:
         resp = await session.get(
             f"company/general/menus/delivery/{delivery_id}/new",
             headers=_get_utility_headers(),
             cookies=await _get_session(),
         )
-        resp.raise_for_status()
+        if not resp.ok:
+            return _handle_error(await resp.text())
 
         return {
             "status": "success",
             "delivery_menu": DeliveryMenu.model_validate_json(await resp.text()),
+        }
+
+
+async def get_delivery_meal_alternatives(
+    order_id: int, delivery_id: int, delivery_meal_id: int
+) -> dict[str, Any]:
+    logger.info(f"fetching delivery mernu alternatives {delivery_meal_id}")
+    async with aiohttp.ClientSession(VIKING_API) as session:
+        resp = await session.get(
+            f"company/customer/order/{order_id}/deliveries/{delivery_id}/delivery-meals/{delivery_meal_id}/switch",
+            headers=_get_utility_headers(),
+            cookies=await _get_session(),
+        )
+        if not resp.ok:
+            return _handle_error(await resp.text())
+
+        return {
+            "status": "success",
+            "delivery_meal_alternatives": DeliveryMealChange.model_validate_json(
+                await resp.text()
+            ),
         }
 
 
@@ -114,3 +159,8 @@ async def _get_session() -> dict[str, str]:
         resp.raise_for_status()
 
         return {"SESSION": resp.cookies["SESSION"].value}
+
+
+def _handle_error(raw_response: str):
+    error = ApiError.model_validate_json(raw_response)
+    return {"status": "error", "error_message": f"{error.title} - {error.message}"}
