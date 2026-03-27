@@ -1,6 +1,5 @@
 from datetime import date
 import datetime
-from uuid import UUID
 
 from google.adk import Runner
 from google.adk.models.google_llm import _ResourceExhaustedError

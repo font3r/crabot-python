@@ -1,1 +1,1 @@
-from .agent import currency_agent
+from . import agent
