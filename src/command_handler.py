@@ -28,8 +28,7 @@ async def run_agent(user_id: str, prompt: str) -> str:
     session = await session_service.create_session(
         app_name="personal_assistant",
         user_id=user_id,
-        session_id=user_id, # move to conversation id that can be somehow stored and mapped to user
-        state={"current_date": f"{datetime.date.today()}"},
+        session_id=user_id,  # move to conversation id that can be somehow stored and mapped to user
     )
 
     runner = Runner(

@@ -3,6 +3,7 @@ import os
 from typing import Any, Final
 from aiocache import cached
 from aiocache.backends.memory import SimpleMemoryCache
+from google.adk.tools import ToolContext
 
 import aiohttp
 from pydantic import BaseModel, Field, RootModel
@@ -31,9 +32,13 @@ class DeliveryMenu(BaseModel):
 
 class DeliveryMenuMeal(BaseModel):
     delivery_meal_id: int = Field(alias="deliveryMealId")
-    meal_time: str = Field(alias="mealName")
+    meal_time: str = Field(
+        alias="mealName", description="Time of the meal, like breakfast or dinner"
+    )
     meal_name: str = Field(alias="menuMealName")
-    thermo: str = Field(alias="thermo")
+    thermo: str = Field(
+        alias="thermo", description="Indicated whether meal has to be heated or no"
+    )
 
 
 class DeliveryMealChange(BaseModel):
@@ -56,9 +61,15 @@ class ApiError(BaseModel):
     message: str
 
 
-@cached(ttl=180, cache=SimpleMemoryCache)
-async def get_active_order() -> dict[str, Any]:
+@cached(ttl=360, cache=SimpleMemoryCache)
+async def get_active_order(tool_context: ToolContext) -> dict[str, Any]:
     """Fetches orders and returns first one (assuming only one active order exists)"""
+
+    if "user:active_order" in tool_context.state:
+        return {
+            "status": "success",
+            "active_order": tool_context.state["user:active_order"],
+        }
 
     logger.info("fetching active orders")
     async with aiohttp.ClientSession(VIKING_API) as session:
@@ -70,14 +81,15 @@ async def get_active_order() -> dict[str, Any]:
         if not resp.ok:
             return _handle_error(await resp.text())
 
-        return {
-            "status": "success",
-            "active_order": ActiveOrders.model_validate_json(await resp.text()).root[0],
-        }
+        active_order = ActiveOrders.model_validate_json(await resp.text()).root[0]
+        tool_context.state["user:active_order"] = active_order
+
+        return {"status": "success", "active_order": active_order}
 
 
-@cached(ttl=180, cache=SimpleMemoryCache)
+@cached(ttl=360, cache=SimpleMemoryCache)
 async def get_order_details(order_id: int) -> dict[str, Any]:
+    """Fetches order details for gived order_id"""
     logger.info(f"fetching order details {order_id}")
     async with aiohttp.ClientSession(VIKING_API) as session:
         resp = await session.get(
@@ -88,10 +100,9 @@ async def get_order_details(order_id: int) -> dict[str, Any]:
         if not resp.ok:
             return _handle_error(await resp.text())
 
-        return {
-            "status": "success",
-            "order_details": OrderDetail.model_validate_json(await resp.text()),
-        }
+        order_details = OrderDetail.model_validate_json(await resp.text())
+
+        return {"status": "success", "order_details": order_details}
 
 
 async def get_delivery_menu(delivery_id: int) -> dict[str, Any]:
@@ -139,7 +150,7 @@ def _get_utility_headers() -> dict[str, str]:
     }
 
 
-@cached(ttl=180, cache=SimpleMemoryCache)
+@cached(ttl=360, cache=SimpleMemoryCache)
 async def _get_session() -> dict[str, str]:
     logger.info("generating API session")
     username = os.getenv("VIKING_USERNAME")
