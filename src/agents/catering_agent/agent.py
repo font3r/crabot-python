@@ -3,6 +3,8 @@ import datetime
 from google.adk.agents import LlmAgent
 from google.adk.tools import FunctionTool
 
+from agents.diet_analyzer_agent.agent import diet_analyzer_agent
+
 from .viking_api import (
     get_active_order,
     get_order_details,
@@ -14,6 +16,8 @@ SYSTEM_INSTRUCTION = (
     "You are a specialized assistant for catering management. Your role is to provide "
     "details about user catering and its meals, you can also suggest alternatives based on your tools.\n"
     "If user asks questions unrelated to catering/food/diet topics, refuse to answer.\n"
+    "Once user mentions that he wants to know alternatives or he does not like specific meals, \n"
+    "send possible alternatives to 'diet_analyzer_agent'.\n"
     "\n"
     "SESSION STATE (persists across conversations for this user):\n"
     "- active order ID: {user:active_order?} (user's current catering order, do NOT re-fetch if set)\n"
@@ -38,4 +42,6 @@ catering_agent = LlmAgent(
         FunctionTool(get_delivery_menu),
         FunctionTool(get_delivery_meal_alternatives),
     ],
+    sub_agents=[diet_analyzer_agent]
+    
 )

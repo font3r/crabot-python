@@ -51,7 +51,7 @@ class MealChangeOptions(BaseModel):
 
 class MealChangeDetails(BaseModel):
     meal_time: str = Field(alias="mealName")
-    mean_name: str = Field(alias="menuMealName")
+    meal_name: str = Field(alias="menuMealName")
     thermo: str = Field(alias="thermo")
     diet_calories_meal_id: int = Field(alias="dietCaloriesMealId")
 
