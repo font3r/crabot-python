@@ -2,7 +2,7 @@ import datetime
 
 from google.adk import Runner
 from google.adk.models.google_llm import _ResourceExhaustedError
-from google.adk.sessions import InMemorySessionService
+from google.adk.sessions.sqlite_session_service import SqliteSessionService
 from google.genai.types import Content, Part
 
 from gateway_contracts import MessageEvent
@@ -15,21 +15,30 @@ async def handle_command(client: DiscordRestClient, msg: MessageEvent):
         return
 
     prompt = msg.content[4 : len(msg.content)]
-    await client.send_message(msg.channel_id, await run_agent(msg.author_id, prompt))
+    await client.send_message(
+        msg.channel_id, await run_agent(msg.author_id, msg.channel_id, prompt)
+    )
 
 
 def mention(user_id: int) -> str:
     return f"<@!{user_id}>"
 
 
-async def run_agent(user_id: str, prompt: str) -> str:
-    session_service = InMemorySessionService()
+async def run_agent(user_id: str, channel_id: str, prompt: str) -> str:
+    session_service = SqliteSessionService("./crabot_datastore.db")
 
-    session = await session_service.create_session(
+    session = await session_service.get_session(
         app_name="personal_assistant",
         user_id=user_id,
-        session_id=user_id,  # move to conversation id that can be somehow stored and mapped to user
+        session_id=channel_id
     )
+
+    if session is None:
+        session = await session_service.create_session(
+            app_name="personal_assistant",
+            user_id=user_id,
+            session_id=channel_id,
+        )
 
     runner = Runner(
         agent=root_agent, app_name=session.app_name, session_service=session_service
