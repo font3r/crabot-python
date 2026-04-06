@@ -16,9 +16,8 @@ async def handle_command(client: DiscordRestClient, msg: MessageEvent):
     if msg.author_id != "551147597545340961":  # bot author
         return
 
-    prompt = msg.content[4 : len(msg.content)]
     await client.send_message(
-        msg.channel_id, await run_agent(msg.author_id, msg.channel_id, prompt)
+        msg.channel_id, await run_agent(msg.author_id, msg.channel_id, msg.content)
     )
 
 
@@ -52,9 +51,8 @@ async def run_agent(user_id: str, channel_id: str, prompt: str) -> str:
             session_id=session.id,
             new_message=message,
         ):
-            if event.is_final_response():
-                if event.content and event.content.parts:
-                    return "".join(p.text or "" for p in event.content.parts)
+            if event.is_final_response() and event.content and event.content.parts:
+                return "".join(p.text or "" for p in event.content.parts)
 
         return ""
     except _ResourceExhaustedError:

@@ -5,6 +5,8 @@ import aiohttp
 from typing import Final
 
 from dotenv import load_dotenv
+from langfuse import get_client
+from openinference.instrumentation.google_adk import GoogleADKInstrumentor
 from command_handler import handle_command
 from gateway_contracts import (
     GatewayOpcode,
@@ -107,4 +109,18 @@ async def main():
 
 if __name__ == "__main__":
     load_dotenv()
+
+    try:
+        langfuse = get_client()
+
+        if langfuse.auth_check():
+            logger.info("Langfuse client is authenticated and ready!")
+            GoogleADKInstrumentor().instrument()
+        else:
+            logger.warning(
+                "Langfuse authentication failed. Please check your credentials and host."
+            )
+    except Exception as e:
+        logger.exception("error during setting up Langfuse", e)
+
     asyncio.run(main())
